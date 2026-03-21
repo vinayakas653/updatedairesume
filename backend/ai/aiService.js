@@ -90,23 +90,23 @@ export async function generateResumeAI(data) {
 
       Rules:
       - 3 to 4 lines only
-      - Write in FIRST PERSON using "I" (not the candidate's name)
+      - Write ONLY in FIRST PERSON using "I am" or "I have"
+      - NEVER mention or use the candidate's name anywhere in the summary
       - No headings
       - No bullet points
       - No explanations
       - No notes
       - Plain text only
       - Focus on key achievements and skills
-      - Start with "I am" or "I have"
 
       Instructions:
       - If a professional summary is provided by the user, analyze it and improve it.
       - Preserve the user's intent and core information.
       - Do NOT repeat the summary verbatim.
       - If no summary is provided, generate one from the candidate details.
+      - CRITICAL: Under NO circumstances should the candidate's name appear in the output.
 
       Candidate Details:
-      Name: ${data.fullName}
       Skills: ${formatSkills(data.skills) || "Not provided"}
       Education: ${formatEducation(data.education) || "Not provided"}
       Experience: ${formatExperience(data.experience) || "Not provided"}
@@ -199,6 +199,7 @@ export const generateCoverLetterAI = async (jobDetails, sectionType) => {
     console.log("📝 Job Details:", JSON.stringify(jobDetails, null, 2));
 
     let prompt = "";
+
     const baseContext = `
       Job Title: ${jobDetails.jobTitle || 'Role'}
       Company: ${jobDetails.companyName || 'Company'}
@@ -207,99 +208,118 @@ export const generateCoverLetterAI = async (jobDetails, sectionType) => {
       Experience: ${jobDetails.experience || ''}
     `;
 
+    // ✅ CLEAN CONTEXT (REMOVE NAME + THIRD PERSON)
+    const cleanedContext = baseContext
+      .replace(/Candidate Name:.*\n?/gi, "")
+      .replace(/\b[A-Z][a-z]+\s[A-Z][a-z]+\b/g, "") // remove full names
+      .replace(/\b(he|his|him|she|her)\b/gi, "");
+
     switch (sectionType) {
+
       case 'openingParagraph':
         prompt = `
-          Write a professional opening paragraph for a cover letter for the position of ${jobDetails.jobTitle} at ${jobDetails.companyName}.
-          Context:
-          ${baseContext}
-          
-          Rules:
-          - Write in first person ("I").
-          - Express enthusiasm for the role and company.
-          - Mention why you are a great fit briefly.
-          - Keep it under 4 lines.
-          - STRICTLY NO placeholders like [Role] or [Company]. Use the provided details.
-          - STRICTLY NO meta-commentary like "Here is the paragraph". Just the text.
-          - Tone: Professional, Confident, Engaging.
-        `;
+Write a professional opening paragraph for a cover letter.
+
+Context:
+${cleanedContext}
+
+Rules:
+- Write ONLY in first person ("I", "my").
+- NEVER use any name.
+- Show enthusiasm for ${jobDetails.jobTitle} at ${jobDetails.companyName}.
+- Keep it under 4 lines.
+- No placeholders.
+- No meta-commentary.
+`;
         break;
 
       case 'bodyParagraph1':
         prompt = `
-          Write the first body paragraph of a cover letter focusing on key qualifications.
-          Context:
-          ${baseContext}
-          
-          Rules:
-          - Focus on the candidate's skills and experience relevant to ${jobDetails.jobTitle}.
-          - Use specific examples if available in the context.
-          - STRICTLY NO placeholders. If specific numbers aren't known, use qualitative descriptors (e.g., "significant increase", "led a team").
-          - STRICTLY NO meta-commentary. Just the paragraph text.
-          - Keep it under 6 lines.
-        `;
+Write the first body paragraph of a cover letter.
+
+Context:
+${cleanedContext}
+
+Rules:
+- Write ONLY in first person ("I", "my", "me").
+- NEVER use any name or third-person words.
+- Start sentences with "I" (e.g., "I bring", "I have built").
+- Convert ALL context into first person.
+- Focus on skills relevant to ${jobDetails.jobTitle}.
+- Keep it under 6 lines.
+- No placeholders.
+- No meta-commentary.
+
+IMPORTANT:
+If any name appears, rewrite the response in first person.
+`;
         break;
 
       case 'bodyParagraph2':
         prompt = `
-          Write the second body paragraph of a cover letter focusing on cultural fit and additional value.
-          Context:
-          ${baseContext}
-          
-          Rules:
-          - Explain why the candidate is passionate about ${jobDetails.companyName} or the industry.
-          - Mention soft skills like leadership, collaboration, or problem-solving.
-          - STRICTLY NO placeholders.
-          - STRICTLY NO meta-commentary. Just the paragraph text.
-          - Keep it under 6 lines.
-        `;
+Write the second body paragraph of a cover letter.
+
+Context:
+${cleanedContext}
+
+Rules:
+- Write ONLY in first person.
+- NEVER use any name.
+- Show interest in ${jobDetails.companyName}.
+- Include soft skills (teamwork, problem-solving, leadership).
+- Keep it under 6 lines.
+- No placeholders.
+- No meta-commentary.
+`;
         break;
 
       case 'closingParagraph':
         prompt = `
-          Write a strong closing paragraph for a cover letter.
-          Context:
-          ${baseContext}
-          
-          Rules:
-          - Reiterate interest in the ${jobDetails.jobTitle} role.
-          - Include a call to action (requesting an interview).
-          - Thank the reader.
-          - Do NOT include the signature ("Sincerely, Name"). JUST the paragraph.
-          - STRICTLY NO placeholders.
-          - STRICTLY NO meta-commentary.
-          - Keep it under 3 lines.
-        `;
+Write a closing paragraph for a cover letter.
+
+Context:
+${cleanedContext}
+
+Rules:
+- Write ONLY in first person.
+- NEVER use any name.
+- Reaffirm interest in ${jobDetails.jobTitle}.
+- Ask for an interview.
+- Thank the reader.
+- Max 3 lines.
+- No placeholders.
+- No meta-commentary.
+`;
         break;
 
       case 'jobDescription':
         prompt = `
-          Rewrite and enhance the following job description to be more professional and ATS-friendly.
-          Context:
-          ${baseContext}
-          Job Description: ${jobDetails.jobDescription || ''}
+Rewrite the job description professionally.
 
-          Rules:
-          - Keep the core meaning and key responsibilities intact.
-          - Use clear, professional language with strong action verbs.
-          - Highlight key skills, tools, and qualifications.
-          - Do NOT add placeholders or fabricate requirements.
-          - STRICTLY NO meta-commentary. Return only the improved job description text.
-          - Keep it concise and well-structured.
-        `;
+Context:
+${cleanedContext}
+Job Description: ${jobDetails.jobDescription || ''}
+
+Rules:
+- Keep meaning intact.
+- Use strong professional language.
+- No placeholders.
+- No meta-commentary.
+`;
         break;
 
       default:
         throw new Error("Invalid section type");
     }
+
     const response = await getAIResponse(prompt, 0.7);
     return response;
+
   } catch (error) {
     console.error("❌ AI COVER LETTER ERROR:", error);
     throw error;
   }
 };
-
 
 // ✅ 4. Extract Data from Resume Text (FIX #1)
 export async function extractResumeData(resumeText) {
@@ -766,7 +786,7 @@ Use ONLY these exact admin routes when navigating:
 - Users: /admin/users
 - Subscription / subscriptions / plans: /admin/subscription
 - Analytics: /admin/analytics
-- Templates: /admin/templates
+- Templates: /admin/manage-templates
 - Notifications: /admin/notifications
 - Blog: /admin/blog
 - Profile: /admin/profile

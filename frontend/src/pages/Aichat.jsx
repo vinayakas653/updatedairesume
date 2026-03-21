@@ -85,6 +85,18 @@ export default function Aichat() {
     if (!customText && !input.trim()) return;
 
     const text = customText ? customText : input.trim();
+    const lower = text.toLowerCase();
+
+    // Admin switch intercept — works even from user dashboard
+    if (lower.includes("go to admin") || lower.includes("switch to admin") || lower.includes("admin dashboard") || lower.includes("admin dashbord") || lower.includes("super admin") || lower.includes("admin mode")) {
+      setMessages((prev) => [...prev,
+        { from: "user", text },
+        { from: "bot", text: "✅ Taking you to the Admin Dashboard!" }
+      ]);
+      setInput("");
+      setTimeout(() => { setOpen(false); navigate("/admin"); }, 1000);
+      return;
+    }
 
     setMessages((prev) => [...prev, { from: "user", text }]);
     setInput("");

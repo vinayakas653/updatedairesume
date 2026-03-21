@@ -64,7 +64,7 @@ export const AdminChatbotResponse = async (req, res) => {
       revenueAgg, apiStatsAgg, subBreakdown, dailyActiveAgg, userGrowthAgg,
       resumeChartAgg, templateAgg
     ] = await Promise.all([
-      User.countDocuments({ isAdmin: false }),
+      User.countDocuments(),
       User.countDocuments({ lastLogin: { $gte: last7Days }, isAdmin: false }),
       User.countDocuments({ createdAt: { $gte: last30Days }, isAdmin: false }),
       Resume.countDocuments(),
