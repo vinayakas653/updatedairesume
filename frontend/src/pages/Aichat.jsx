@@ -187,7 +187,7 @@ export default function Aichat() {
           <div className="flex flex-col">
             <div className="flex items-center gap-2 font-semibold text-sm">
               <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-              AI Resume Assistant
+              AI Assistant
             </div>
             <span className="text-[11px] text-slate-400">
               Powered by UpToSkills AI

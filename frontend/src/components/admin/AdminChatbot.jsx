@@ -11,6 +11,7 @@ const ADMIN_SUGGESTIONS = [
   "What is the total revenue?",
   "Show subscription breakdown",
   "Most used templates",
+  "Show analytics",
 ];
 
 const USER_SUGGESTIONS = [
@@ -78,28 +79,41 @@ export default function AdminChatbot() {
 
     const lower = text.toLowerCase();
 
-    // Admin switch — check FIRST before user check
-    if (lower.includes("switch to admin") || lower.includes("admin mode") || lower.includes("admin dashboard") || lower.includes("admin dashbord") || lower.includes("go to admin") || lower.includes("super admin")) {
-      setInput("");
-      setMode("admin");
-      setAdminMessages(prev => [...prev,
-        { from: "user", text },
-        { from: "bot", text: "✅ Switched to Admin mode! Taking you to the Admin Dashboard." }
-      ]);
-      setTimeout(() => { setOpen(false); navigate("/admin"); }, 1000);
-      return;
-    }
+    // ── Navigation intercepts (handled locally, no AI needed) ──
+    const navRoutes = [
+      { keywords: ["switch to admin", "admin mode", "admin dashboard", "admin dashbord", "go to admin", "super admin"], path: "/admin",              label: "Admin Dashboard",    mode: "admin" },
+      { keywords: ["switch to user", "user mode", "user dashboard", "go to user"],                                       path: "/user/dashboard",     label: "User Dashboard",     mode: "user"  },
+      { keywords: ["home page", "go to home", "landing page", "open home"],                                              path: "/",                   label: "Home Page"                         },
+      { keywords: ["go to users", "open users", "show users"],                                                           path: "/admin/users",        label: "Users Page"                        },
+      { keywords: ["go to analytics", "open analytics", "show analytics"],                                               path: "/admin/analytics",    label: "Analytics Page"                    },
+      { keywords: ["go to subscription", "open subscription", "show subscription", "go to plans"],                       path: "/admin/subscription", label: "Subscription Page"                 },
+      { keywords: ["go to templates", "open templates", "show templates"],                                               path: "/admin/manage-templates", label: "Templates Page"                },
+      { keywords: ["go to notifications", "open notifications", "show notifications"],                                   path: "/admin/notifications",label: "Notifications Page"                },
+      { keywords: ["go to blog", "open blog", "show blog"],                                                              path: "/admin/blog",         label: "Blog Page"                         },
+      { keywords: ["go to pricing", "open pricing", "show pricing"],                                                     path: "/pricing",            label: "Pricing Page"                      },
+      { keywords: ["go to about", "open about"],                                                                         path: "/about",              label: "About Page"                        },
+      { keywords: ["go to contact", "open contact"],                                                                     path: "/contact",            label: "Contact Page"                      },
+    ];
 
-    // User switch
-    if (lower.includes("switch to user") || lower.includes("user mode") || lower.includes("user dashboard") || lower.includes("go to user")) {
-      setInput("");
-      setMode("user");
-      setUserMessages(prev => [...prev,
-        { from: "user", text },
-        { from: "bot", text: "✅ Switched to User mode! Taking you to the User Dashboard." }
-      ]);
-      setTimeout(() => { setOpen(false); navigate("/user/dashboard"); }, 1000);
-      return;
+    for (const route of navRoutes) {
+      if (route.keywords.some(k => lower.includes(k))) {
+        setInput("");
+        if (route.mode) {
+          setMode(route.mode);
+          const setter = route.mode === "admin" ? setAdminMessages : setUserMessages;
+          setter(prev => [...prev,
+            { from: "user", text },
+            { from: "bot", text: `✅ Taking you to ${route.label}!` }
+          ]);
+        } else {
+          setMessages(prev => [...prev,
+            { from: "user", text },
+            { from: "bot", text: `✅ Taking you to ${route.label}!` }
+          ]);
+        }
+        setTimeout(() => { setOpen(false); navigate(route.path); }, 1000);
+        return;
+      }
     }
 
     setMessages(prev => [...prev, { from: "user", text }]);
@@ -159,7 +173,7 @@ export default function AdminChatbot() {
             </div>
             <div>
               <p className="text-white text-sm font-semibold leading-none">
-                {isAdmin ? "Admin AI Assistant" : "AI Resume Assistant"}
+                AI Assistant
               </p>
               <p className="text-orange-100 text-[10px] mt-0.5">
                 {isAdmin ? "Live platform data" : "Powered by UpToSkills AI"}
@@ -244,10 +258,10 @@ export default function AdminChatbot() {
           {messages.length === 1 && (
             <div className="mt-1">
               <p className="text-xs text-slate-400 mb-2 font-medium">Quick questions</p>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {suggestions.map((s, i) => (
                   <button key={i} onClick={() => sendMessage(s)}
-                    className="px-2.5 py-1 text-xs rounded-full border transition bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-100">
+                    className="px-2.5 py-2 text-xs rounded-xl border transition bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-100 text-left w-full">
                     {s}
                   </button>
                 ))}
