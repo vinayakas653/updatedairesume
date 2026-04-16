@@ -889,3 +889,58 @@ Follow all rules strictly. Return ONLY valid JSON.
     throw error;
   }
 }
+
+export async function atsResumeAdviceAI(userQuestion, scanData) {
+  try {
+    const sections = (scanData.sectionScores || [])
+      .map(s => `- ${s.sectionName}: ${s.score}/${s.maxScore} — ${s.status || ""}`)
+      .join("\n");
+
+    const matched = (scanData.matchedKeywords || []).slice(0, 15).map(k => k.keyword || k).join(", ");
+    const missing = (scanData.missingKeywords || []).slice(0, 15).map(k => k.keyword || k).join(", ");
+    const suggestions = (scanData.suggestions || []).slice(0, 8).join("\n- ");
+    const misspelled = (scanData.misspelledWords || []).slice(0, 10).join(", ");
+
+    const prompt = `
+You are an expert ATS resume coach. A user has uploaded their resume and received an ATS analysis. Answer their question using the actual scan data below.
+
+==============================
+ATS SCAN RESULTS
+==============================
+Overall Score: ${scanData.overallScore}/100
+Job Title Scanned For: ${scanData.jobTitle || "General"}
+
+Section Scores:
+${sections || "Not available"}
+
+Matched Keywords: ${matched || "None"}
+Missing Keywords: ${missing || "None"}
+Misspelled Words: ${misspelled || "None"}
+
+Suggestions from scan:
+- ${suggestions || "None"}
+
+==============================
+RESPONSE RULES
+==============================
+- Answer ONLY based on the scan data above.
+- Be specific — mention actual section names, scores, missing keywords.
+- Use markdown with bullet points and headings.
+- Prioritize the lowest-scoring sections first.
+- Give actionable, concrete steps to improve.
+- Keep response focused and under 400 words.
+- Do NOT make up information not in the scan data.
+
+User Question: ${userQuestion}
+
+Return ONLY valid JSON:
+{ "mode": "message", "text": "MARKDOWN_RESPONSE" }
+    `;
+
+    const response = await getAIResponse(prompt, 0.5);
+    return response;
+  } catch (error) {
+    console.error("ATS ADVICE AI ERROR:", error);
+    throw error;
+  }
+}

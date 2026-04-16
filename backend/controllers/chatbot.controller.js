@@ -1,4 +1,4 @@
-import { chatBotAPIResponse, adminChatbotAIResponse } from "../ai/aiService.js";
+import { chatBotAPIResponse, adminChatbotAIResponse, atsResumeAdviceAI } from "../ai/aiService.js";
 import User from "../Models/User.js";
 import Resume from "../Models/resume.js";
 import Subscription from "../Models/subscription.js";
@@ -140,6 +140,30 @@ export const AdminChatbotResponse = async (req, res) => {
     return res.json(parsed);
   } catch (error) {
     console.error("❌ Admin Chatbot Error:", error);
+    return res.status(500).json({ mode: "message", text: "Something went wrong. Please try again." });
+  }
+};
+
+export const ATSChatbotResponse = async (req, res) => {
+  try {
+    const { message, scanData } = req.body;
+    if (!message || !scanData) {
+      return res.status(400).json({ mode: "message", text: "Missing message or scan data." });
+    }
+
+    const aiResponse = await atsResumeAdviceAI(message, scanData);
+
+    let parsed;
+    try {
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { mode: "message", text: aiResponse };
+    } catch {
+      parsed = { mode: "message", text: aiResponse };
+    }
+
+    return res.json(parsed);
+  } catch (error) {
+    console.error("❌ ATS Chatbot Error:", error);
     return res.status(500).json({ mode: "message", text: "Something went wrong. Please try again." });
   }
 };

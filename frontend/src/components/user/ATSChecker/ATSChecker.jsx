@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { pdfjs } from "react-pdf";
 import "../../../styles/react-pdf/TextLayer.css";
@@ -358,6 +359,7 @@ function ErrorTable({ errors, type, onSelect }) {
 const PANEL_HEIGHT = "calc(100vh - 180px)";
 
 const ATSChecker = ({ onSidebarToggle }) => {
+  const navigate = useNavigate();
   const fileInputRef = useRef(null);
   const [isMobilePreviewExpanded, setIsMobilePreviewExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -530,6 +532,7 @@ const handleFileChange = async (e) => {
 
     if (!res.ok) {
       console.error(`Server error [${res.status}]:`, rawText.slice(0, 500));
+      setIsAnalyzing(false);
       return;
     }
 
@@ -538,6 +541,7 @@ const handleFileChange = async (e) => {
       data = JSON.parse(rawText);
     } catch {
       console.error("Expected JSON but got:", rawText.slice(0, 300));
+      setIsAnalyzing(false);
       return;
     }
 
@@ -576,12 +580,24 @@ const handleFileChange = async (e) => {
         setPronounErrors(updatedData.pronounAnalysis.detected);
       setResumeText(updatedData?.text || "");
       sessionStorage.setItem("ats_analysis_result", JSON.stringify(updatedData));
+      // Save extracted resume data for chatbot "continue with same data" feature
+      if (updatedData.extractedData) {
+        sessionStorage.setItem("ats_extracted_data", JSON.stringify(updatedData.extractedData));
+      }
+      // Auto-open chatbot with edit options after scan
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent("ats-scan-complete", {
+          detail: { score: updatedData.overallScore }
+        }));
+      }, 7000);
     } else {
       console.error("API returned success: false →", data?.message || data);
+      alert(`ATS scan failed: ${data?.message || "Unknown error"}`);
     }
   } catch (err) {
-  console.error("ATS fetch failed — is the backend running on port 5000?", err);
-} finally {
+    console.error("ATS fetch failed — is the backend running on port 5000?", err);
+    alert(`ATS fetch error: ${err.message}`);
+  } finally {
   // Enforce minimum 5.5 second loading animation
   const elapsed = Date.now() - analysisStartTimeRef.current;
   const minDuration = 5500; // 5.5 seconds
